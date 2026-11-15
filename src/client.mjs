@@ -1,7 +1,13 @@
 import { Archive } from './archive.mjs';
 
 export async function capture(url, directory, options = {}) {
-  const response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(5000), ...options });
+  const { source: detail, headers, ...rest } = options;
+  const response = await fetch(url, {
+    redirect: 'manual',
+    signal: AbortSignal.timeout(5000),
+    ...rest,
+    headers: { 'user-agent': 'CollectionBot', ...headers },
+  });
   if (!response.ok) throw new Error(`来源领取失败：${response.status}`);
   const chunks = [];
   let size = 0;
@@ -11,7 +17,7 @@ export async function capture(url, directory, options = {}) {
     chunks.push(chunk);
   }
   const bytes = Buffer.concat(chunks);
-  const source = { url, status: response.status, type: response.headers.get('content-type'), etag: response.headers.get('etag') };
+  const source = { url, status: response.status, type: response.headers.get('content-type'), etag: response.headers.get('etag'), ...detail };
   const archive = new Archive(directory);
   const receipt = await archive.save(bytes, source);
   return { bytes, receipt };
